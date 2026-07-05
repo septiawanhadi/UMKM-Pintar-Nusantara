@@ -1,40 +1,197 @@
-import React from 'react';
-import { ScrollView, StatusBar } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, StatusBar, Switch, View } from 'react-native';
 import styled from 'styled-components/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../src/theme/tokens';
 import { useAuthStore } from '../../src/store/authStore';
+import { useFinanceStore } from '../../src/store/financeStore';
+import { useContentStore } from '../../src/store/contentStore';
+import { useSalesStore } from '../../src/store/salesStore';
+import { useNetworkStore } from '../../src/store/networkStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import BackgroundGlows from '../../src/components/BackgroundGlows';
+import LineChart, { LineChartData } from '../../src/components/LineChart';
+
+interface ActivityItemType {
+  id: string;
+  text: string;
+  time: Date;
+  icon: string;
+  color: string;
+}
 
 export default function HomeScreen() {
-  const { user } = useAuthStore();
   const router = useRouter();
+  const { user } = useAuthStore();
+  const { transactions, loadAllTransactions } = useFinanceStore();
+  const { products, loadHistory } = useContentStore();
+  const { orders, loadSalesData } = useSalesStore();
+  const { isOnline, toggleNetwork } = useNetworkStore();
 
-  // Mock data for quick stats and activities
-  const stats = {
-    salesToday: 'Rp 1.250.000',
-    transactionsToday: 8,
-    topProduct: 'Batik Tulis Mega Mendung',
+  // Load all store data on mount
+  useEffect(() => {
+    loadAllTransactions();
+    loadHistory();
+    loadSalesData();
+  }, []);
+
+  // 1. Calculate Today's Stats
+  const now = new Date();
+  const todayTransactions = transactions.filter((tx) => {
+    const txDate = new Date(tx.date);
+    return (
+      txDate.getDate() === now.getDate() &&
+      txDate.getMonth() === now.getMonth() &&
+      txDate.getFullYear() === now.getFullYear()
+    );
+  });
+
+  const totalSalesTodayVal = todayTransactions
+    .filter(tx => tx.type === 'INCOME')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const totalSalesToday = 'Rp ' + totalSalesTodayVal.toLocaleString('id-ID');
+  const transactionsCountToday = todayTransactions.length;
+
+  // 2. Determine Top Selling Product
+  let topProduct = 'Belum ada penjualan';
+  if (orders.length > 0) {
+    const productCounts: Record<string, number> = {};
+    orders.forEach((order) => {
+      productCounts[order.productName] = (productCounts[order.productName] || 0) + order.quantity;
+    });
+
+    let maxCount = 0;
+    Object.entries(productCounts).forEach(([name, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topProduct = name;
+      }
+    });
+  } else if (products.length > 0) {
+    topProduct = products[0].name; // Default to last created product if no orders confirmed yet
+  }
+
+  // 3. Calculate Chart Data (Last 7 Days)
+  const last7Days = Array.from({length: 7}).map((_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    return d;
+  });
+
+  const financeChartData: BarChartData[] = last7Days.map(date => {
+    const dayTransactions = transactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      return txDate.getDate() === date.getDate() && txDate.getMonth() === date.getMonth() && txDate.getFullYear() === date.getFullYear();
+    });
+    const income = dayTransactions.filter(tx => tx.type === 'INCOME').reduce((sum, tx) => sum + tx.amount, 0);
+    const expense = dayTransactions.filter(tx => tx.type === 'EXPENSE').reduce((sum, tx) => sum + tx.amount, 0);
+    return {
+      label: date.toLocaleDateString('id-ID', { weekday: 'short' }),
+      value1: income,
+      value2: expense
+    };
+  });
+
+  const contentChartData: BarChartData[] = last7Days.map(date => {
+    const dayContent = products.filter(p => {
+      const pDate = new Date(p.createdAt);
+      return pDate.getDate() === date.getDate() && pDate.getMonth() === date.getMonth() && pDate.getFullYear() === date.getFullYear();
+    }).length;
+    return {
+      label: date.toLocaleDateString('id-ID', { weekday: 'short' }),
+      value1: dayContent
+    };
+  });
+
+  // 4. Compile Real Recent Activities Timeline (Top 5)
+  const compiledActivities: ActivityItemType[] = [];
+
+  // Add real transactions to feed
+  transactions.slice(0, 3).forEach((tx) => {
+    const amtStr = 'Rp ' + tx.amount.toLocaleString('id-ID');
+    const isIncome = tx.type === 'INCOME';
+    compiledActivities.push({
+      id: `act-tx-${tx.id}`,
+      text: `Baru dicatat ${isIncome ? 'pemasukan' : 'pengeluaran'} ${tx.description} sebesar ${amtStr}`,
+      time: new Date(tx.date),
+      icon: isIncome ? 'cash-outline' : 'cart-outline',
+      color: isIncome ? theme.colors.secondary : theme.colors.danger,
+    });
+  });
+
+  // Add real content generations to feed
+  products.slice(0, 2).forEach((prod) => {
+    compiledActivities.push({
+      id: `act-prod-${prod.id}`,
+      text: `AI sukses membuat materi promosi untuk "${prod.name}"`,
+      time: new Date(prod.createdAt),
+      icon: 'sparkles-outline',
+      color: theme.colors.primary,
+    });
+  });
+
+  // Add real orders to feed
+  orders.slice(0, 2).forEach((order) => {
+    compiledActivities.push({
+      id: `act-ord-${order.orderId}`,
+      text: `Pesanan terdaftar: ${order.quantity}x ${order.productName} (${order.variant})`,
+      time: new Date(), // Simulating recent
+      icon: 'cube-outline',
+      color: '#3182CE',
+    });
+  });
+
+  // Sort timeline chronologically (newest first)
+  const activities = compiledActivities
+    .sort((a, b) => b.time.getTime() - a.time.getTime());
+
+  // Time formatter helper
+  const formatTimeAgo = (date: Date) => {
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins} menit lalu`;
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    return date.toLocaleDateString('id-ID');
   };
-
-  const activities = [
-    { id: '1', text: 'Baru dicatat pemasukan Rp 150rb', time: '10 menit yang lalu', icon: 'cash-outline', color: '#4ECDC4' },
-    { id: '2', text: 'AI menyarankan caption baru untuk Baju Batik', time: '1 jam yang lalu', icon: 'sparkles-outline', color: '#FF6B00' },
-    { id: '3', text: 'Pesanan baru dari Budi Santoso dideteksi oleh AI', time: '2 jam yang lalu', icon: 'chatbubble-ellipses-outline', color: '#FF6B00' },
-    { id: '4', text: 'Laporan bulanan Juni siap diunduh', time: '1 hari yang lalu', icon: 'document-text-outline', color: '#6B7280' },
-    { id: '5', text: 'Baru dicatat pengeluaran bahan baku Rp 300rb', time: '2 hari yang lalu', icon: 'cart-outline', color: '#E53E3E' },
-  ];
 
   return (
     <Container>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
+      <StatusBar barStyle="light-content" />
+      <BackgroundGlows />
+
+      {/* Offline Status Warning Banner */}
+      {!isOnline && (
+        <OfflineBanner>
+          <Ionicons name="cloud-offline-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <OfflineBannerText>Mode Offline: Menyinkronkan...</OfflineBannerText>
+        </OfflineBanner>
+      )}
+
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2), paddingBottom: 100 }}>
         
-        {/* Welcome Section */}
+        {/* Welcome Card & Network Switch */}
         <WelcomeSection>
-          <GreetingText>Selamat Datang,</GreetingText>
-          <UserName>{user?.displayName || 'Pemilik UMKM'}</UserName>
-          <UserEmail>{user?.email}</UserEmail>
+          <WelcomeHeader>
+            <View>
+              <GreetingText>Selamat Datang,</GreetingText>
+              <UserName>{user?.displayName || 'Pemilik UMKM'}</UserName>
+              <UserEmail>{user?.email}</UserEmail>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <NetworkLabel>{isOnline ? 'Online' : 'Offline'}</NetworkLabel>
+              <Switch 
+                value={isOnline}
+                onValueChange={toggleNetwork}
+                trackColor={{ false: theme.colors.border, true: '#E6F9F8' }}
+                thumbColor={isOnline ? theme.colors.secondary : theme.colors.danger}
+              />
+            </View>
+          </WelcomeHeader>
         </WelcomeSection>
 
         {/* Quick Stats Section */}
@@ -45,7 +202,7 @@ export default function HomeScreen() {
               <Ionicons name="cash" size={20} color={theme.colors.primary} />
             </StatIconBackground>
             <StatLabel>Total Penjualan</StatLabel>
-            <StatValue>{stats.salesToday}</StatValue>
+            <StatValue>{totalSalesToday}</StatValue>
           </StatCard>
 
           <StatCard>
@@ -53,7 +210,7 @@ export default function HomeScreen() {
               <Ionicons name="receipt" size={20} color={theme.colors.secondary} />
             </StatIconBackground>
             <StatLabel>Transaksi</StatLabel>
-            <StatValue>{stats.transactionsToday} Kali</StatValue>
+            <StatValue>{transactionsCountToday} Kali</StatValue>
           </StatCard>
         </StatsRow>
 
@@ -63,9 +220,24 @@ export default function HomeScreen() {
           </TopProductIconContainer>
           <TopProductInfo>
             <TopProductLabel>Produk Terlaris</TopProductLabel>
-            <TopProductName>{stats.topProduct}</TopProductName>
+            <TopProductName numberOfLines={1}>{topProduct}</TopProductName>
           </TopProductInfo>
         </TopProductCard>
+
+        {/* Charts Section */}
+        <SectionTitle>Tren Keuangan (7 Hari)</SectionTitle>
+        <LineChart 
+          title="Tren Keuangan (7 Hari)"
+          data={financeChartData}
+          color1={theme.colors.secondary} // Income
+          color2={theme.colors.danger}    // Expense
+        />
+
+        <LineChart 
+          title="Produktivitas Konten AI (7 Hari)"
+          data={contentChartData}
+          color1={theme.colors.primary}
+        />
 
         {/* Quick Actions */}
         <SectionTitle>Aksi Cepat</SectionTitle>
@@ -74,38 +246,45 @@ export default function HomeScreen() {
             <ActionIconWrapper color="#FF6B00">
               <Ionicons name="camera-outline" size={24} color="#FFFFFF" />
             </ActionIconWrapper>
-            <ActionLabel>+ Foto Produk</ActionLabel>
+            <ActionLabel>Foto Produk AI</ActionLabel>
           </ActionButton>
 
           <ActionButton onPress={() => router.push('/(tabs)/sales')}>
             <ActionIconWrapper color="#4ECDC4">
               <Ionicons name="chatbubbles-outline" size={24} color="#FFFFFF" />
             </ActionIconWrapper>
-            <ActionLabel>Chat WA/IG</ActionLabel>
+            <ActionLabel>Asisten AI</ActionLabel>
           </ActionButton>
 
           <ActionButton onPress={() => router.push('/(tabs)/finance')}>
-            <ActionIconWrapper color="#6B7280">
-              <Ionicons name="mic-outline" size={24} color="#FFFFFF" />
+            <ActionIconWrapper color="#3182CE">
+              <Ionicons name="wallet-outline" size={24} color="#FFFFFF" />
             </ActionIconWrapper>
-            <ActionLabel>Input Suara</ActionLabel>
+            <ActionLabel>Buku Kas</ActionLabel>
           </ActionButton>
         </ActionsContainer>
 
-        {/* Recent Activities */}
+        {/* Recent Activities Feed */}
         <SectionTitle>Aktivitas Terbaru</SectionTitle>
-        <ActivityFeed>
-          {activities.map((activity) => (
-            <ActivityItem key={activity.id}>
-              <ActivityIconContainer color={activity.color}>
-                <Ionicons name={activity.icon as any} size={18} color="#FFFFFF" />
-              </ActivityIconContainer>
-              <ActivityContent>
-                <ActivityText>{activity.text}</ActivityText>
-                <ActivityTime>{activity.time}</ActivityTime>
-              </ActivityContent>
-            </ActivityItem>
-          ))}
+        <ActivityFeed nestedScrollEnabled={true}>
+          {activities.length === 0 ? (
+            <EmptyTimeline>
+              <Ionicons name="time-outline" size={24} color={theme.colors.textSecondary} />
+              <EmptyTimelineText>Belum ada catatan aktivitas baru.</EmptyTimelineText>
+            </EmptyTimeline>
+          ) : (
+            activities.map((activity) => (
+              <ActivityItem key={activity.id}>
+                <ActivityIconContainer color={activity.color}>
+                  <Ionicons name={activity.icon as any} size={16} color="#FFFFFF" />
+                </ActivityIconContainer>
+                <ActivityContent>
+                  <ActivityText>{activity.text}</ActivityText>
+                  <ActivityTime>{formatTimeAgo(activity.time)}</ActivityTime>
+                </ActivityContent>
+              </ActivityItem>
+            ))
+          )}
         </ActivityFeed>
 
       </ScrollView>
@@ -114,17 +293,40 @@ export default function HomeScreen() {
 }
 
 // Styled Components
-const Container = styled.SafeAreaView`
+const Container = styled(SafeAreaView)`
   flex: 1;
   background-color: ${theme.colors.background};
 `;
 
+const OfflineBanner = styled.View`
+  background-color: ${theme.colors.danger};
+  height: 38px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding-horizontal: 16px;
+`;
+
+const OfflineBannerText = styled.Text`
+  font-family: ${theme.typography.fontFamily};
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+`;
+
 const WelcomeSection = styled.View`
   margin-bottom: ${theme.spacing(3)}px;
-  background-color: ${theme.colors.surface};
+  background-color: ${theme.colors.cardBg};
   padding: ${theme.spacing(2.5)}px;
   border-radius: ${theme.borderRadius.default}px;
-  border: 1px solid ${theme.colors.border};
+  border: 1.5px solid ${theme.colors.border};
+  ${theme.glassShadow}
+`;
+
+const WelcomeHeader = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const GreetingText = styled.Text`
@@ -148,6 +350,15 @@ const UserEmail = styled.Text`
   margin-top: 4px;
 `;
 
+const NetworkLabel = styled.Text`
+  font-family: ${theme.typography.fontFamily};
+  font-size: 10px;
+  font-weight: 700;
+  color: ${theme.colors.textSecondary};
+  text-transform: uppercase;
+  margin-bottom: 2px;
+`;
+
 const SectionTitle = styled.Text`
   font-family: ${theme.typography.fontFamily};
   font-size: 16px;
@@ -164,21 +375,24 @@ const StatsRow = styled.View`
 `;
 
 const StatCard = styled.View`
-  background-color: ${theme.colors.surface};
+  background-color: ${theme.colors.cardBg};
   border-radius: ${theme.borderRadius.default}px;
-  border: 1px solid ${theme.colors.border};
+  border: 1.5px solid ${theme.colors.border};
   padding: ${theme.spacing(2)}px;
   width: 48%;
+  ${theme.glassShadow}
 `;
 
 const StatIconBackground = styled.View<{ color: string }>`
-  background-color: ${(props) => props.color};
+  background-color: ${(props) => props.color === '#FFF0E6' ? 'rgba(255, 107, 0, 0.15)' : 'rgba(0, 229, 255, 0.15)'};
   width: 36px;
   height: 36px;
   border-radius: 10px;
   align-items: center;
   justify-content: center;
   margin-bottom: ${theme.spacing(1)}px;
+  border-width: 1px;
+  border-color: ${(props) => props.color === '#FFF0E6' ? 'rgba(255, 107, 0, 0.25)' : 'rgba(0, 229, 255, 0.25)'};
 `;
 
 const StatLabel = styled.Text`
@@ -196,22 +410,23 @@ const StatValue = styled.Text`
 `;
 
 const TopProductCard = styled.View`
-  background-color: ${theme.colors.surface};
+  background-color: ${theme.colors.cardBg};
   border-radius: ${theme.borderRadius.default}px;
-  border: 1px solid ${theme.colors.border};
+  border: 1.5px solid ${theme.colors.border};
   padding: ${theme.spacing(2)}px;
   flex-direction: row;
   align-items: center;
+  ${theme.glassShadow}
 `;
 
 const TopProductIconContainer = styled.View`
-  background-color: #FFFDF0;
+  background-color: rgba(255, 215, 0, 0.12);
   width: 44px;
   height: 44px;
   border-radius: 12px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #FFEAA7;
+  border: 1px solid rgba(255, 215, 0, 0.25);
   margin-right: ${theme.spacing(2)}px;
 `;
 
@@ -240,23 +455,26 @@ const ActionsContainer = styled.View`
 `;
 
 const ActionButton = styled.TouchableOpacity`
-  background-color: ${theme.colors.surface};
+  background-color: ${theme.colors.cardBg};
   border-radius: ${theme.borderRadius.default}px;
-  border: 1px solid ${theme.colors.border};
+  border: 1.5px solid ${theme.colors.border};
   padding: ${theme.spacing(2)}px 10px;
   width: 31%;
   align-items: center;
   justify-content: center;
+  ${theme.glassShadow}
 `;
 
 const ActionIconWrapper = styled.View<{ color: string }>`
-  background-color: ${(props) => props.color};
+  background-color: ${(props) => props.color === '#FF6B00' ? 'rgba(255, 107, 0, 0.15)' : props.color === '#4ECDC4' ? 'rgba(0, 229, 255, 0.15)' : 'rgba(49, 130, 206, 0.15)'};
   width: 44px;
   height: 44px;
   border-radius: 12px;
   align-items: center;
   justify-content: center;
   margin-bottom: ${theme.spacing(1)}px;
+  border-width: 1px;
+  border-color: ${(props) => props.color === '#FF6B00' ? 'rgba(255, 107, 0, 0.25)' : props.color === '#4ECDC4' ? 'rgba(0, 229, 255, 0.25)' : 'rgba(49, 130, 206, 0.25)'};
 `;
 
 const ActionLabel = styled.Text`
@@ -267,11 +485,26 @@ const ActionLabel = styled.Text`
   text-align: center;
 `;
 
-const ActivityFeed = styled.View`
-  background-color: ${theme.colors.surface};
+const ActivityFeed = styled.ScrollView`
+  background-color: ${theme.colors.cardBg};
   border-radius: ${theme.borderRadius.default}px;
-  border: 1px solid ${theme.colors.border};
+  border: 1.5px solid ${theme.colors.border};
   padding: ${theme.spacing(2)}px;
+  max-height: 380px;
+  ${theme.glassShadow}
+`;
+
+const EmptyTimeline = styled.View`
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.spacing(3)}px;
+`;
+
+const EmptyTimelineText = styled.Text`
+  font-family: ${theme.typography.fontFamily};
+  font-size: ${theme.typography.bodySmall.fontSize}px;
+  color: ${theme.colors.textSecondary};
+  margin-top: 6px;
 `;
 
 const ActivityItem = styled.View`
@@ -279,7 +512,7 @@ const ActivityItem = styled.View`
   align-items: center;
   padding-vertical: ${theme.spacing(1.5)}px;
   border-bottom-width: 1px;
-  border-bottom-color: ${theme.colors.background};
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 `;
 
 const ActivityIconContainer = styled.View<{ color: string }>`
@@ -309,3 +542,4 @@ const ActivityTime = styled.Text`
   color: ${theme.colors.textSecondary};
   margin-top: 2px;
 `;
+

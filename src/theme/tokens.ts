@@ -1,13 +1,17 @@
+import { Platform } from 'react-native';
+
 export const theme = {
   colors: {
-    primary: '#FF6B00',        // Oranye Cerah
-    secondary: '#4ECDC4',      // Teal/Mint
-    background: '#F7F9FC',     // Off-White
-    surface: '#FFFFFF',        // Surface Card/Modal
-    textPrimary: '#1A202C',    // Dark Charcoal
-    textSecondary: '#6B7280',  // Medium Gray
-    danger: '#E53E3E',         // Red
-    border: '#E2E8F0',         // Soft gray border
+    primary: '#FF6B00',          // Oranye Cerah
+    secondary: '#00E5FF',        // Neon Cyan/Mint
+    background: '#0B101D',       // Midnight Deep Slate
+    surface: 'rgba(255, 255, 255, 0.06)', // Ultra-translucent light glass overlay
+    cardBg: 'rgba(22, 28, 45, 0.65)',    // Translucent dark glass backdrop
+    textPrimary: '#FFFFFF',      // White for dark mode contrast
+    textSecondary: '#94A3B8',    // Slate Gray for secondary text
+    danger: '#FF4D4D',           // Bright Neon Red
+    border: 'rgba(255, 255, 255, 0.12)',  // Soft translucent glass border
+    inputBg: 'rgba(255, 255, 255, 0.04)', // Translucent input background
   },
   typography: {
     fontFamily: 'Inter',
@@ -30,13 +34,22 @@ export const theme = {
   },
   spacing: (multiplier: number) => multiplier * 8,
   borderRadius: {
-    default: 10,
-    cta: 12,
+    default: 16, // Smoother round corners for Liquid Glass cards
+    cta: 24,     // Capsule button styling
   },
   animations: {
     duration: 300,
-    easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)' as const, // easeOutCubic approximation
-  }
+    easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)' as const,
+  },
+  glassShadow: Platform.OS === 'web'
+    ? 'box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.25);'
+    : `
+      shadow-color: #000000;
+      shadow-offset: 0px 10px;
+      shadow-opacity: 0.25;
+      shadow-radius: 20px;
+      elevation: 8;
+    `
 };
 
 export type ThemeType = typeof theme;

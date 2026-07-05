@@ -6,36 +6,28 @@ Aplikasi ini membantu pemilik usaha mikro, kecil, dan menengah yang belum terbia
 
 ---
 
-## 🚀 Fitur Utama & Roadmap Pengembangan
+## ✨ Deskripsi & Fitur Utama Aplikasi
 
-Pengembangan aplikasi ini dibagi menjadi 5 fase berurutan:
+**UMKM Pintar Nusantara** dilengkapi dengan berbagai fitur digital modern yang dirancang untuk mendukung operasional bisnis harian secara mandiri dan efisien:
 
-### **Fase 1: Foundation & Auth (SELESAI ✅)**
-*   Inisialisasi proyek menggunakan **React Native (Expo Managed Workflow)** dengan template navigasi halaman bawaan (**Expo Router**).
-*   Penerapan **Design Tokens** (Warna Utama, Warna Sekunder, Tipografi Inter, Spacing Grid 8px, Border Radius, dan Kurva Animasi).
-*   Manajemen status global menggunakan **Zustand**.
-*   **Sistem Autentikasi** (Daftar & Masuk) yang mendukung Firebase Auth serta memiliki sistem cadangan otomatis (**Local Mock Mode** menggunakan `AsyncStorage`) sehingga aplikasi dapat langsung dijalankan dan diuji coba secara lokal tanpa konfigurasi API key Firebase terlebih dahulu.
-*   *Route Guarding* & *Splash Screen Lock* saat pemuatan sesi pengguna agar tidak terjadi kedipan UI.
-*   Kerangka dasar halaman navigasi bawah (*Bottom Tabs*).
+### 1. 🤖 Asisten AI Pintar (Offline-Ready)
+*   **Asisten Chat Bisnis**: Fitur tanya jawab seputar bisnis, tips pemasaran, dan ide pengembangan UMKM yang dapat merespon secara natural.
+*   **Pengingat Agenda Cerdas**: Secara cerdas mendeteksi perintah pengingat (misalnya: *"Ingatkan besok jam 9 pagi untuk restock barang"*), mem-parsing tanggal dan waktu, serta menyimpannya langsung ke kalender lokal perangkat Android/iOS Anda.
+*   **100% Berjalan Lokal**: Menggunakan logika parser lokal yang sangat cepat, handal, dan dapat diakses kapan saja tanpa perlu koneksi internet ataupun kuota API Cloud.
 
-### **Fase 2: Core Finance MVP (Selanjutnya 🛠️)**
-*   Pencatatan Ledger Keuangan (Transaksi Pemasukan & Pengeluaran).
-*   CRUD transaksi berbasis teks manual dan input suara.
-*   Penyimpanan data lokal offline menggunakan Realm DB / AsyncStorage.
+### 2. 📊 Pencatatan Keuangan (Buku Kas)
+*   **Ledger Pemasukan & Pengeluaran**: Sistem pencatatan pembukuan harian yang intuitif untuk mendokumentasikan setiap arus kas masuk dan keluar.
+*   **Visualisasi Grafik Interaktif**: Grafik garis (*Line Chart*) performa keuangan yang dibangun secara kustom (tanpa library berat eksternal) untuk memantau tren pendapatan secara instan.
+*   **Ekspor Data Profesional**: Unduh seluruh riwayat pencatatan kas Anda langsung menjadi file **PDF** atau **Excel (XLSX)** berkualitas tinggi, siap dikirim untuk kebutuhan pembukuan, investor, atau laporan pajak.
 
-### **Fase 3: Content Generator Integration**
-*   Pemberian akses galeri/kamera untuk mengambil foto produk.
-*   Integrasi API AI (Gemini / OpenAI) untuk menghasilkan materi promosi.
-*   Pembuatan Caption Instagram, Deskripsi Marketplace, dan Hashtag secara otomatis dengan fitur *copy-to-clipboard*.
+### 3. 📸 Pembuat Konten Promosi AI (AI Copywriter)
+*   **Generator Caption Multi-Gaya**: Menghasilkan materi promosi media sosial (Instagram) dengan 3 pilihan gaya bahasa: *Persuasif* (menjual), *Santai* (interaktif), dan *Edukasi* (informasi).
+*   **Kategori & Spesifikasi Produk**: Dilengkapi dengan grid penentu Kategori Produk (Kuliner, Fashion, Kecantikan, Elektronik, Lainnya) serta input tipe produk spesifik (contoh: *"parfum"*, *"camilan pedas"*, *"laptop"*) agar tulisan promosi menjadi sangat relevan.
+*   **Tagar & Deskripsi Toko**: Menghasilkan daftar hashtag populer serta template deskripsi produk marketplace (Shopee, Tokopedia, dll) yang siap salin (*copy-to-clipboard*).
 
-### **Fase 4: Sales Automation MVP**
-*   Antarmuka pesan (Chat Interface) interaktif.
-*   Ekstraksi teks chat pesanan dari pelanggan secara otomatis oleh AI untuk mendeteksi order pembelian.
-*   Integrasi data order ke dalam database penjualan.
-
-### **Fase 5: Integration & Polish**
-*   Menghubungkan ringkasan modul keuangan dan promosi ke dalam Beranda (*Home Dashboard*).
-*   Sinkronisasi offline penuh dan pelacakan aktivitas dengan Firebase Analytics.
+### 4. 🔒 Autentikasi Hibrida & Skalabilitas Offline
+*   **Firebase & Local Fallback**: Mendukung masuk/daftar dengan Firebase Authentication secara online, dan otomatis beralih ke sesi penyimpanan lokal (*Mock Mode*) menggunakan AsyncStorage jika perangkat sedang berada di wilayah tanpa sinyal internet.
+*   **Offline-First Priority**: Seluruh database keuangan, riwayat konten promosi, dan riwayat obrolan AI disimpan secara lokal di perangkat Anda. Data akan otomatis disinkronkan saat terhubung kembali ke internet.
 
 ---
 

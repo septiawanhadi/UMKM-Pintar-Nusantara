@@ -32,25 +32,36 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.secondary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          position: 'absolute',
+          bottom: 16,
+          left: 16,
+          right: 16,
+          height: 66,
+          borderRadius: 33,
+          borderWidth: 1.5,
+          borderColor: theme.colors.border,
+          backgroundColor: 'rgba(11, 16, 29, 0.85)',
+          paddingBottom: 10,
+          paddingTop: 10,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.3,
+          shadowRadius: 16,
+          elevation: 8,
         },
         headerStyle: {
-          backgroundColor: theme.colors.surface,
-          borderBottomColor: theme.colors.border,
+          backgroundColor: '#0B101D',
+          borderBottomColor: 'rgba(255, 255, 255, 0.1)',
           borderBottomWidth: 1,
         },
         headerTitleStyle: {
           fontFamily: theme.typography.fontFamily,
           fontSize: 18,
           fontWeight: '700',
-          color: theme.colors.textPrimary,
+          color: '#FFFFFF',
         },
       }}
     >

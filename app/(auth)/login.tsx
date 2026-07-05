@@ -3,13 +3,16 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ActivityIndicator, 
-  Alert 
+  Alert,
+  StatusBar
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import styled from 'styled-components/native';
 import { theme } from '../../src/theme/tokens';
 import { useAuthStore } from '../../src/store/authStore';
+import { analyticsService } from '../../src/services/analytics';
 import { Ionicons } from '@expo/vector-icons';
+import BackgroundGlows from '../../src/components/BackgroundGlows';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,6 +27,9 @@ export default function LoginScreen() {
       Alert.alert('Eror', 'Harap isi semua kolom.');
       return;
     }
+    
+    analyticsService.trackEvent('login_button_clicked', { email: email.toLowerCase() });
+    
     try {
       await login(email, password);
     } catch (err: any) {
@@ -38,10 +44,12 @@ export default function LoginScreen() {
 
   return (
     <Container behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <StatusBar barStyle="light-content" />
+      <BackgroundGlows />
       <ScrollContainer contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <HeaderContainer>
           <LogoIconContainer>
-            <Ionicons name="rocket-sharp" size={40} color={theme.colors.surface} />
+            <Ionicons name="rocket-sharp" size={40} color={theme.colors.primary} />
           </LogoIconContainer>
           <AppName>
             UMKM Pintar <AppNameHighlight>Nusantara</AppNameHighlight>
@@ -146,7 +154,8 @@ const HeaderContainer = styled.View`
 `;
 
 const LogoIconContainer = styled.View`
-  background-color: ${theme.colors.primary};
+  background-color: rgba(255, 107, 0, 0.12);
+  border: 1.5px solid rgba(255, 107, 0, 0.25);
   width: 72px;
   height: 72px;
   border-radius: 20px;
@@ -183,16 +192,12 @@ const SubTitle = styled.Text`
 `;
 
 const FormContainer = styled.View`
-  background-color: ${theme.colors.surface};
+  background-color: ${theme.colors.cardBg};
+  border: 1.5px solid ${theme.colors.border};
   border-top-left-radius: 30px;
   border-top-right-radius: 30px;
   padding: ${theme.spacing(4)}px ${theme.spacing(3)}px;
-  flex: 1;
-  shadow-color: #000;
-  shadow-offset: 0px -4px;
-  shadow-opacity: 0.05;
-  shadow-radius: 10px;
-  elevation: 8;
+  ${theme.glassShadow}
 `;
 
 const FormTitle = styled.Text`
@@ -206,8 +211,8 @@ const FormTitle = styled.Text`
 const ErrorBox = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: #FFF5F5;
-  border: 1px solid #FED7D7;
+  background-color: rgba(229, 62, 62, 0.15);
+  border: 1px solid rgba(229, 62, 62, 0.3);
   border-radius: ${theme.borderRadius.default}px;
   padding: ${theme.spacing(1.5)}px;
   margin-bottom: ${theme.spacing(2)}px;
@@ -237,7 +242,7 @@ const InputWrapper = styled.View`
   border-radius: ${theme.borderRadius.default}px;
   padding-horizontal: ${theme.spacing(2)}px;
   height: 52px;
-  background-color: ${theme.colors.background};
+  background-color: ${theme.colors.inputBg};
 `;
 
 const InputIcon = styled.View`
@@ -287,7 +292,7 @@ const SubmitButtonText = styled.Text`
   font-family: ${theme.typography.fontFamily};
   font-size: ${theme.typography.bodyLarge.fontSize}px;
   font-weight: 700;
-  color: ${theme.colors.surface};
+  color: #FFFFFF;
   margin-right: ${theme.spacing(1)}px;
 `;
 
@@ -313,3 +318,4 @@ const SignupLinkText = styled.Text`
   font-weight: 700;
   color: ${theme.colors.primary};
 `;
+

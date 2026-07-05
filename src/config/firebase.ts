@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { Platform } from 'react-native';
 // @ts-ignore
-import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, browserLocalPersistence, Auth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -25,10 +26,16 @@ export const isMockMode = !isConfigValid;
 if (!isMockMode) {
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    
+    // Web uses browserLocalPersistence, Mobile uses React Native persistence wrapper
+    const persistence = Platform.OS === 'web'
+      ? browserLocalPersistence
+      : getReactNativePersistence(AsyncStorage);
+
     auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
+      persistence,
     });
-    console.log('Firebase initialized successfully.');
+    console.log('Firebase initialized successfully with platform persistence.');
   } catch (error) {
     console.error('Firebase initialization failed, falling back to mock mode:', error);
     (auth as any) = null;
